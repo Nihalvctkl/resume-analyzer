@@ -1,0 +1,15 @@
+python
+java
+c
+c++
+sql
+html
+css
+javascript
+react
+node
+django
+flask
+machine learning
+data analysis
+excel
