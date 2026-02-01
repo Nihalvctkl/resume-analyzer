@@ -6,3 +6,4 @@ analyzer/__pycache__/skill_extractor.cpython-311.pyc
 parser/__pycache__/__init__.cpython-311.pyc
 parser/__pycache__/docx_parser.cpython-311.pyc
 parser/__pycache__/pdf_parser.cpython-311.pyc
+analyzer/__pycache__/jd_matcher.cpython-311.pyc
