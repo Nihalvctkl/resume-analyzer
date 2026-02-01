@@ -13,14 +13,18 @@ def load_skills(file_path: str) -> list:
     return skills
 
 
+import re
+
 def extract_skills(resume_text: str, skills: list) -> list:
     """
-    Extract skills found in the resume text.
+    Extract skills using word-boundary matching.
     """
     found_skills = []
 
     for skill in skills:
-        if skill in resume_text:
+        # Escape special characters like c++
+        pattern = r"\b" + re.escape(skill) + r"\b"
+        if re.search(pattern, resume_text):
             found_skills.append(skill)
 
     return found_skills
