@@ -13,28 +13,32 @@ class ResumeAnalyzerApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Resume Analyzer")
-        self.root.geometry("700x500")
+        self.root.geometry("800x550")
 
+        # App state
         self.resume_path = None
         self.jd_path = None
 
         self.build_ui()
 
+    # ---------------- UI BUILD ---------------- #
+
     def build_ui(self):
         title = tk.Label(
             self.root,
             text="Resume Analyzer",
-            font=("Arial", 18, "bold")
+            font=("Arial", 20, "bold")
         )
         title.pack(pady=10)
 
+        # Button section
         btn_frame = tk.Frame(self.root)
         btn_frame.pack(pady=10)
 
         self.resume_btn = tk.Button(
             btn_frame,
             text="Upload Resume",
-            width=20,
+            width=22,
             command=self.select_resume
         )
         self.resume_btn.grid(row=0, column=0, padx=10)
@@ -42,7 +46,7 @@ class ResumeAnalyzerApp:
         self.jd_btn = tk.Button(
             btn_frame,
             text="Upload Job Description",
-            width=20,
+            width=22,
             command=self.select_jd
         )
         self.jd_btn.grid(row=0, column=1, padx=10)
@@ -52,16 +56,50 @@ class ResumeAnalyzerApp:
             text="Analyze",
             width=30,
             height=2,
+            bg="#4CAF50",
+            fg="white",
             command=self.analyze
         )
         self.analyze_btn.pack(pady=15)
 
+        # Output area with scrollbar
+        output_frame = tk.Frame(self.root)
+        output_frame.pack(padx=10, pady=5, fill=tk.BOTH, expand=True)
+
+        scrollbar = tk.Scrollbar(output_frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
         self.output = tk.Text(
-            self.root,
-            height=15,
-            width=80
+            output_frame,
+            wrap=tk.WORD,
+            yscrollcommand=scrollbar.set
         )
-        self.output.pack(pady=10)
+        self.output.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        scrollbar.config(command=self.output.yview)
+        self.output.config(state=tk.DISABLED)
+
+        # Status bar
+        self.status = tk.Label(
+            self.root,
+            text="Ready",
+            anchor="w"
+        )
+        self.status.pack(fill=tk.X, padx=8, pady=4)
+
+    # ---------------- HELPERS ---------------- #
+
+    def write_output(self, text: str):
+        self.output.config(state=tk.NORMAL)
+        self.output.insert(tk.END, text)
+        self.output.config(state=tk.DISABLED)
+
+    def clear_output(self):
+        self.output.config(state=tk.NORMAL)
+        self.output.delete("1.0", tk.END)
+        self.output.config(state=tk.DISABLED)
+
+    # ---------------- ACTIONS ---------------- #
 
     def select_resume(self):
         path = filedialog.askopenfilename(
@@ -70,7 +108,8 @@ class ResumeAnalyzerApp:
         )
         if path:
             self.resume_path = path
-            self.output.insert(tk.END, f"Selected resume: {path}\n")
+            self.status.config(text="Resume selected")
+            self.write_output(f"Selected resume:\n{path}\n\n")
 
     def select_jd(self):
         path = filedialog.askopenfilename(
@@ -79,22 +118,26 @@ class ResumeAnalyzerApp:
         )
         if path:
             self.jd_path = path
-            self.output.insert(tk.END, f"Selected JD: {path}\n")
+            self.status.config(text="Job description selected")
+            self.write_output(f"Selected job description:\n{path}\n\n")
 
     def analyze(self):
-        self.output.delete("1.0", tk.END)
+        self.clear_output()
 
         if not self.resume_path:
-            self.output.insert(tk.END, "Please upload a resume first.\n")
+            self.write_output("Please upload a resume first.\n")
+            self.status.config(text="Waiting for resume")
             return
 
-        # Read resume
-        if self.resume_path.lower().endswith(".pdf"):
-            raw_text = parse_pdf(self.resume_path)
-        else:
-            raw_text = parse_docx(self.resume_path)
+        self.status.config(text="Analyzing...")
 
-        cleaned_resume = clean_text(raw_text)
+        # Parse resume
+        if self.resume_path.lower().endswith(".pdf"):
+            raw_resume = parse_pdf(self.resume_path)
+        else:
+            raw_resume = parse_docx(self.resume_path)
+
+        cleaned_resume = clean_text(raw_resume)
         skills = load_skills("data/skills.txt")
 
         # JD vs Resume mode
@@ -110,23 +153,27 @@ class ResumeAnalyzerApp:
                 skills
             )
 
-            self.output.insert(tk.END, "JD vs Resume Analysis\n")
-            self.output.insert(tk.END, "---------------------\n")
-            self.output.insert(tk.END, f"JD Skills       : {result['jd_skills']}\n")
-            self.output.insert(tk.END, f"Resume Skills  : {result['resume_skills']}\n")
-            self.output.insert(tk.END, f"Missing Skills : {result['missing_skills']}\n")
-            self.output.insert(tk.END, f"Score          : {result['score']['score']}%\n")
+            self.write_output("JD vs Resume Analysis\n")
+            self.write_output("---------------------\n")
+            self.write_output(f"JD Skills       : {result['jd_skills']}\n")
+            self.write_output(f"Resume Skills  : {result['resume_skills']}\n")
+            self.write_output(f"Missing Skills : {result['missing_skills']}\n")
+            self.write_output(f"Score          : {result['score']['score']}%\n")
 
         # Resume-only mode
         else:
-            found_skills = extract_skills(cleaned_resume, skills)
-            score = calculate_score(found_skills, skills)
+            found = extract_skills(cleaned_resume, skills)
+            score = calculate_score(found, skills)
 
-            self.output.insert(tk.END, "Resume Analysis\n")
-            self.output.insert(tk.END, "---------------\n")
-            self.output.insert(tk.END, f"Matched Skills : {found_skills}\n")
-            self.output.insert(tk.END, f"Score          : {score['score']}%\n")
+            self.write_output("Resume Analysis\n")
+            self.write_output("---------------\n")
+            self.write_output(f"Matched Skills : {found}\n")
+            self.write_output(f"Score          : {score['score']}%\n")
 
+        self.status.config(text="Analysis complete")
+
+
+# ---------------- ENTRY ---------------- #
 
 def launch_app():
     root = tk.Tk()
